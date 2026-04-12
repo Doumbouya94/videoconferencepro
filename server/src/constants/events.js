@@ -1,0 +1,70 @@
+export const EVENTS = {
+  // Room lifecycle
+  JOIN_ROOM:        "join-room",
+  USER_JOINED:      "user-joined",
+  USER_LEFT:        "user-left",
+  ROOM_PARTICIPANTS:"room-participants",
+  ROOM_NOT_FOUND:   "room-not-found",
+
+  // WebRTC signaling
+  OFFER:            "offer",
+  ANSWER:           "answer",
+  ICE:              "ice-candidate",
+
+  // Chat
+  CHAT:             "chat-message",
+
+  // Screen share
+  SCREEN_START:     "screen-share-start",
+  SCREEN_STOP:      "screen-share-stop",
+
+  // Host controls
+  MUTE_ALL:         "mute-all",
+  MUTE_USER:        "mute-user",
+  KICK_USER:        "kick-user",
+  LOCK_ROOM:        "lock-room",
+  ASSIGN_HOST:      "assign-host",
+  HOST_CHANGED:     "host-changed",
+
+  // Participant status
+  TOGGLE_VIDEO:     "toggle-video",
+  TOGGLE_AUDIO:     "toggle-audio",
+  VIDEO_TOGGLED:    "user-video-toggled",
+  AUDIO_TOGGLED:    "user-audio-toggled",
+  MUTED_BY_HOST:    "muted-by-host",
+  KICKED:           "kicked",
+  ROOM_LOCKED:      "room-locked",
+
+  // Raise hand
+  RAISE_HAND:       "raise-hand",
+  LOWER_HAND:       "lower-hand",
+  HAND_RAISED:      "hand-raised",
+  HAND_LOWERED:     "hand-lowered",
+
+  // Reactions
+  REACTION:         "reaction",
+  REACTION_BROADCAST: "reaction-broadcast",
+
+  // Audio levels (active speaker)
+  AUDIO_LEVEL:      "audio-level",
+  ACTIVE_SPEAKER:   "active-speaker",
+
+  // Recording (client-side signaling)
+  RECORDING_START:  "recording-start",
+  RECORDING_STOP:   "recording-stop",
+
+  // Breakout rooms
+  BREAKOUT_CREATE:  "breakout-create",
+  BREAKOUT_JOIN:    "breakout-join",
+  BREAKOUT_LEAVE:   "breakout-leave",
+  BREAKOUT_END_ALL: "breakout-end-all",
+  BREAKOUT_UPDATED: "breakout-updated",
+  BREAKOUT_ASSIGNED:"breakout-assigned",
+
+  // Whiteboard
+  WHITEBOARD_DRAW:  "whiteboard-draw",
+  WHITEBOARD_CLEAR: "whiteboard-clear",
+
+  // Analytics
+  STATS_UPDATE:     "stats-update",
+};
