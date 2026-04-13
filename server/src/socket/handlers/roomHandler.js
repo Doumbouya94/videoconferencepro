@@ -22,19 +22,25 @@ export function registerRoomHandlers(io, socket) {
     const participants = roomService.getParticipants(roomId);
     const room = result.room;
 
-    // Send existing participants to the new joiner
+    // Send full participant list to the newcomer
     socket.emit(EVENTS.ROOM_PARTICIPANTS, {
       participants,
       hostId: room.hostId,
       locked: room.locked,
     });
 
-    // Tell everyone else
+    // Notify everyone else about the new joiner
+    // BUG FIX: include both `name` AND `userName` so client code works
+    // regardless of which field it reads
     socket.to(roomId).emit(EVENTS.USER_JOINED, {
-      id: userId,
+      id:       userId,
       socketId: socket.id,
-      name: userName,
-      hostId: room.hostId,
+      name:     userName,      // ← used by ParticipantsPanel, VideoGrid
+      userName: userName,      // ← used by some client listeners
+      hostId:   room.hostId,
+      audioEnabled: true,
+      videoEnabled: true,
+      handRaised:   false,
     });
 
     logger.success(`${userName} joined room ${roomId} (${participants.length} total)`);
@@ -47,7 +53,7 @@ export function registerRoomHandlers(io, socket) {
     const { participant, roomId, room } = result;
     logger.info(`${participant?.name} left room ${roomId}`);
 
-    // If host left, assign a new one
+    // Reassign host if needed
     if (room && room.participants.size > 0 && room.hostId === socket.id) {
       const newHost = room.participants.values().next().value;
       if (newHost) {
@@ -57,9 +63,9 @@ export function registerRoomHandlers(io, socket) {
     }
 
     socket.to(roomId).emit(EVENTS.USER_LEFT, {
-      id: participant?.id,
+      id:       participant?.id,
       socketId: socket.id,
-      name: participant?.name,
+      name:     participant?.name,
     });
   });
 }

@@ -4,7 +4,6 @@ import { useRoom }        from '../../context/RoomContext.jsx';
 import { useUI }          from '../../context/UIContext.jsx';
 import { useScreenShare } from '../../hooks/useScreenShare.js';
 import { useRecording }   from '../../hooks/useRecording.js';
-import { EVENTS }         from '../../utils/events.js';
 
 // ── SVG Icons ─────────────────────────────────────────────────
 const IconMicOn = () => (
@@ -56,8 +55,8 @@ const IconStop = () => (
     <rect x="8" y="8" width="8" height="8" rx="1" fill="currentColor" />
   </svg>
 );
-const IconHand = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+const IconHand = ({ raised }) => (
+  <svg viewBox="0 0 24 24" fill={raised ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
     <path d="M18 11V6a2 2 0 0 0-4 0v0" />
     <path d="M14 10V4a2 2 0 0 0-4 0v2" />
     <path d="M10 10.5V6a2 2 0 0 0-4 0v8" />
@@ -102,7 +101,7 @@ const IconBoard = () => (
   </svg>
 );
 
-// ── ZoomBtn — main action button ──────────────────────────────
+// ── ZoomBtn ───────────────────────────────────────────────────
 function ZoomBtn({ onClick, active, danger, highlight, title, icon, label, pulse }) {
   return (
     <button
@@ -118,12 +117,11 @@ function ZoomBtn({ onClick, active, danger, highlight, title, icon, label, pulse
           : highlight
           ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/40'
           : active
-          ? 'bg-gray-600 text-white ring-2 ring-white/30 shadow-inner'
+          ? 'bg-gray-600 text-white ring-2 ring-white/30'
           : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60'
         }
-        ${pulse ? 'ring-2 ring-offset-1 ring-offset-gray-900' : ''}
-        ${pulse && highlight ? 'ring-green-500' : ''}
-        ${pulse && !highlight ? 'ring-red-500' : ''}
+        ${pulse && highlight ? 'ring-2 ring-green-400 ring-offset-1 ring-offset-gray-900' : ''}
+        ${pulse && !highlight && !danger ? 'ring-2 ring-red-400 ring-offset-1 ring-offset-gray-900' : ''}
       `}
     >
       <span className="transition-transform duration-150 group-hover:scale-110 group-active:scale-95">
@@ -134,7 +132,6 @@ function ZoomBtn({ onClick, active, danger, highlight, title, icon, label, pulse
   );
 }
 
-// ── PanelBtn — right sidebar toggles ─────────────────────────
 function PanelBtn({ onClick, active, title, icon, label }) {
   return (
     <button
@@ -157,11 +154,10 @@ function PanelBtn({ onClick, active, title, icon, label }) {
   );
 }
 
-// ── ControlBar ────────────────────────────────────────────────
-export default function ControlBar({ roomId, onLeave }) {
+// ── ControlBar — receives toggleHand from Room ────────────────
+export default function ControlBar({ roomId, onLeave, toggleHand, handRaised }) {
   const { audioEnabled, videoEnabled, toggleAudio, toggleVideo } = useMedia();
-  const { socket }         = useSocket();
-  const { hostId, locked } = useRoom();
+  const { locked } = useRoom();
   const {
     chatOpen, setChatOpen,
     participantsOpen, setParticipantsOpen,
@@ -171,13 +167,12 @@ export default function ControlBar({ roomId, onLeave }) {
   const { isSharing, toggle: toggleScreen }      = useScreenShare();
   const { isRecording, toggle: toggleRecording } = useRecording();
 
-  const raiseHand = () => socket?.emit(EVENTS.RAISE_HAND, { roomId });
-
   return (
-    <div className="bg-gray-900 border-t border-gray-800 px-4 py-3 flex items-center justify-between gap-2 shadow-2xl"
-      style={{ minHeight: '84px' }}>
-
-      {/* ── Left: status ── */}
+    <div
+      className="bg-gray-900 border-t border-gray-800 px-4 py-3 flex items-center justify-between gap-2 shadow-2xl"
+      style={{ minHeight: '84px' }}
+    >
+      {/* ── Left ── */}
       <div className="hidden md:flex items-center gap-3 w-48 shrink-0">
         {locked && (
           <span className="flex items-center gap-1.5 text-yellow-400 text-xs font-medium">
@@ -190,7 +185,7 @@ export default function ControlBar({ roomId, onLeave }) {
         )}
         {isSharing && (
           <button onClick={toggleScreen}
-            className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl">
+            className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-colors">
             <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
               <rect x="6" y="6" width="12" height="12" rx="1"/>
             </svg>
@@ -199,7 +194,7 @@ export default function ControlBar({ roomId, onLeave }) {
         )}
       </div>
 
-      {/* ── Centre: main buttons ── */}
+      {/* ── Centre ── */}
       <div className="flex items-center gap-2 mx-auto">
 
         <ZoomBtn
@@ -220,7 +215,6 @@ export default function ControlBar({ roomId, onLeave }) {
 
         <ZoomBtn
           onClick={toggleScreen}
-          active={isSharing}
           highlight={isSharing}
           pulse={isSharing}
           icon={<IconShare />}
@@ -230,7 +224,6 @@ export default function ControlBar({ roomId, onLeave }) {
 
         <ZoomBtn
           onClick={toggleRecording}
-          active={isRecording}
           highlight={isRecording}
           pulse={isRecording}
           icon={isRecording ? <IconStop /> : <IconRecord />}
@@ -238,11 +231,14 @@ export default function ControlBar({ roomId, onLeave }) {
           title={isRecording ? "Arrêter l'enregistrement" : "Démarrer l'enregistrement"}
         />
 
+        {/* Hand toggle: raised = yellow highlight, click again to lower */}
         <ZoomBtn
-          onClick={raiseHand}
-          icon={<IconHand />}
-          label="Main"
-          title="Lever la main"
+          onClick={toggleHand}
+          active={handRaised}
+          highlight={handRaised}
+          icon={<IconHand raised={handRaised} />}
+          label={handRaised ? 'Baisser' : 'Main'}
+          title={handRaised ? 'Baisser la main' : 'Lever la main'}
         />
 
         <ZoomBtn
@@ -263,21 +259,21 @@ export default function ControlBar({ roomId, onLeave }) {
         />
       </div>
 
-      {/* ── Right: panel toggles ── */}
+      {/* ── Right ── */}
       <div className="flex items-center gap-1.5 w-48 justify-end shrink-0">
         <PanelBtn
           onClick={() => setParticipantsOpen(o => !o)}
           active={participantsOpen}
           icon={<IconPeople />}
           label="Participants"
-          title="Liste des participants"
+          title="Participants"
         />
         <PanelBtn
           onClick={() => setChatOpen(o => !o)}
           active={chatOpen}
           icon={<IconChat />}
           label="Chat"
-          title="Ouvrir le chat"
+          title="Chat"
         />
         <PanelBtn
           onClick={() => setWhiteboardOpen(o => !o)}

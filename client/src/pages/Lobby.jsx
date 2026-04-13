@@ -1,11 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 
+/**
+ * ECHO FIX:
+ * The Lobby opens a MediaStream for the camera preview.
+ * When the user clicks "Rejoindre", we must STOP all audio tracks from the
+ * Lobby stream before passing it to the Room — otherwise TWO audio inputs
+ * are active simultaneously, causing echo/feedback.
+ *
+ * The correct approach: the Lobby stream is ONLY for preview (muted video).
+ * On join, we stop the Lobby stream and let MediaContext.getMedia() open a
+ * fresh stream with proper echo cancellation settings.
+ *
+ * We pass null to onJoin so MediaContext opens its own clean stream.
+ */
 export default function Lobby({ roomId, userName, onJoin, onBack }) {
-  const [stream,        setStream]       = useState(null);
-  const [audioEnabled,  setAudioEnabled] = useState(true);
-  const [videoEnabled,  setVideoEnabled] = useState(true);
-  const [error,         setError]        = useState('');
-  const [loading,       setLoading]      = useState(false);
+  const [stream,       setStream]      = useState(null);
+  const [audioEnabled, setAudioEnabled]= useState(true);
+  const [videoEnabled, setVideoEnabled]= useState(true);
+  const [error,        setError]       = useState('');
+  const [loading,      setLoading]     = useState(false);
   const videoRef  = useRef(null);
   const streamRef = useRef(null);
 
@@ -28,12 +41,19 @@ export default function Lobby({ roomId, userName, onJoin, onBack }) {
         setError("Impossible d'accéder à la caméra/micro. Vérifiez les permissions.");
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+      // Stop all tracks when Lobby unmounts to release the mic/cam
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
   }, []);
 
   useEffect(() => {
     const el = videoRef.current;
-    if (el && stream) { el.srcObject = stream; el.play().catch(() => {}); }
+    if (el && stream) {
+      el.srcObject = stream;
+      el.play().catch(() => {});
+    }
   }, [stream]);
 
   const toggleAudio = () => {
@@ -48,7 +68,14 @@ export default function Lobby({ roomId, userName, onJoin, onBack }) {
 
   const handleJoin = () => {
     setLoading(true);
-    onJoin(streamRef.current);
+    // ✅ ECHO FIX: Stop the Lobby preview stream completely before entering room.
+    // MediaContext.getMedia() will open a fresh, clean stream for the room.
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    // Pass null — MediaContext will request its own stream
+    onJoin(null);
   };
 
   return (
@@ -71,6 +98,8 @@ export default function Lobby({ roomId, userName, onJoin, onBack }) {
               </div>
             </div>
           )}
+
+          {/* Preview controls */}
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
             <PreviewBtn onClick={toggleAudio} active={!audioEnabled}>
               {audioEnabled ? '🎤' : '🔇'}
@@ -82,7 +111,7 @@ export default function Lobby({ roomId, userName, onJoin, onBack }) {
         </div>
 
         <p className="text-gray-300 text-sm mb-4 text-center">
-          Vous rejoignez en tant que <strong>{userName}</strong>
+          Vous rejoignez en tant que <strong className="text-white">{userName}</strong>
         </p>
 
         {error && (
@@ -91,15 +120,20 @@ export default function Lobby({ roomId, userName, onJoin, onBack }) {
           </div>
         )}
 
-        <button onClick={handleJoin} disabled={loading || !!error}
+        <button
+          onClick={handleJoin}
+          disabled={loading || !!error}
           className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-60
-            text-white font-semibold rounded-xl transition-colors mb-2">
+            text-white font-semibold rounded-xl transition-colors mb-2"
+        >
           {loading ? '⏳ Connexion...' : '🚀 Rejoindre la réunion'}
         </button>
 
-        <button onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); onBack(); }}
+        <button
+          onClick={onBack}
           className="w-full py-2.5 text-gray-400 hover:text-white text-sm rounded-xl
-            hover:bg-gray-800 transition-colors">
+            hover:bg-gray-800 transition-colors"
+        >
           ← Retour
         </button>
       </div>
@@ -109,9 +143,11 @@ export default function Lobby({ roomId, userName, onJoin, onBack }) {
 
 function PreviewBtn({ onClick, active, children }) {
   return (
-    <button onClick={onClick}
-      className={`w-9 h-9 rounded-full flex items-center justify-center text-sm shadow
-        ${active ? 'bg-red-600 text-white' : 'bg-black/60 text-white hover:bg-black/80'}`}>
+    <button
+      onClick={onClick}
+      className={`w-9 h-9 rounded-full flex items-center justify-center text-sm shadow transition-colors
+        ${active ? 'bg-red-600 text-white' : 'bg-black/60 text-white hover:bg-black/80'}`}
+    >
       {children}
     </button>
   );
